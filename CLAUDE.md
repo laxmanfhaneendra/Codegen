@@ -2,10 +2,13 @@
 
 ## Commands
 
+These are registered as **Claude Code custom slash commands** via files in the `.claude/commands/` directory:
+
 | Command | What it does |
 |---|---|
 | `/generate` | Reads `Spec.json` + `generate.json`, generates every file listed in `targets[].files[]`, then runs `post_generate` steps |
 | `/regen` | Detects missing or incomplete generated files and regenerates only those; always runs build verification at the end |
+| `/checker` | Runs build verification and interactive client-to-client integration checks via background terminal tasks |
 
 ## What is hand-written vs. agent-generated
 
@@ -15,6 +18,7 @@
 - `generate.json` — generation config (targets, file lists, build_notes, platform commands, post_generate)
 - `.claude/commands/generate.md` — the `/generate` harness
 - `.claude/commands/regen.md` — the `/regen` harness
+- `.claude/commands/checker.md` — the `/checker` harness
 - `CLAUDE.md`, `DESIGN.md`, `README.md` — project documentation
 
 **Agent-generated (safe to delete and regenerate):**

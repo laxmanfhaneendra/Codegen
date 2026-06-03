@@ -41,23 +41,36 @@ The Python and Kotlin clients are generated from the same spec. They must behave
 
 ## Regenerating the clients
 
+This project utilizes **Claude Code's custom slash command mechanism** to power its agentic generation harness. By placing prompt-instruction markdown files under `.claude/commands/`, these commands are registered natively in the Claude Code CLI and can be executed by the agent to drive code generation, verification, and tests.
+
 **To regenerate everything from scratch:**
 
 1. Delete `clients/python/` and `clients/kotlin/`
 2. Open this repo in Claude Code
-3. Run `/generate`
+3. Run the custom slash command:
+   ```
+   /generate
+   ```
 
-The harness reads `Spec.json` and `generate.json`, writes every file listed in `targets[].files[]` for each target, then runs the `post_generate` step (downloads `gradle-wrapper.jar` for Kotlin). No manual steps required beyond having network access.
+The `/generate` command reads `Spec.json` and `generate.json`, writes every file listed in `targets[].files[]` for each target, then runs the `post_generate` step (downloads `gradle-wrapper.jar` for Kotlin). No manual steps required beyond having network access.
 
 **To repair missing or incomplete files without deleting everything:**
 
+Run the custom slash command:
 ```
 /regen
 ```
 
-`/regen` checks each file against the spec, reports what is MISSING or INCOMPLETE, regenerates only those files, then runs build verification.
+The `/regen` command checks each file against the spec, reports what is MISSING or INCOMPLETE, repairs only those files, and runs build verification.
 
-> **Note:** Regeneration requires network access for the Kotlin target — `gradle-wrapper.jar` is a binary and is downloaded from GitHub as part of the post_generate step.
+**To run the automated build and integration check:**
+
+Run the custom slash command:
+```
+/checker
+```
+
+The `/checker` command compiles both client implementations, starts the reference server, runs both client CLI applications as background tasks, exchanges test messages between them, and cleans up.
 
 ---
 
