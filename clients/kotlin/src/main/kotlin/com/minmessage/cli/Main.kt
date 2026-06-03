@@ -8,13 +8,16 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 fun main(args: Array<String>) {
-    if (args.isEmpty()) {
-        println("Usage: minmessage <username> [ws-url]")
+    val reader = System.`in`.bufferedReader()
+
+    print("Chat as: ")
+    System.out.flush()
+    val username = reader.readLine()?.trim() ?: return
+    if (username.isEmpty()) {
+        println("Username cannot be empty.")
         return
     }
-
-    val username = args[0]
-    val wsUrl    = args.getOrElse(1) { "ws://localhost:8765" }
+    val wsUrl = "ws://localhost:8765"
 
     val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -31,7 +34,6 @@ fun main(args: Array<String>) {
     Thread.sleep(500)
     println("Connected as '$username'. Commands: @recipient message | /status | /quit")
 
-    val reader = System.`in`.bufferedReader()
     while (true) {
         print("$username> ")
         System.out.flush()

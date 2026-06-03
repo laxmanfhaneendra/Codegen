@@ -50,10 +50,14 @@ Wait for output to confirm alice is connected.
 
 ### 3.3 Launch Kotlin Client as "bob"
 
-- Windows: `cmd.exe /c "cd clients\kotlin && .\gradlew.bat -q run --args=bob"`
-- Unix: bash -c `cd clients/kotlin && ./gradlew -q run --args=bob`
+- Windows: `cmd.exe /c "cd clients\kotlin && .\gradlew.bat -q run"`
+- Unix: bash -c `cd clients/kotlin && ./gradlew -q run`
 
-Run as a background task. Wait for output to confirm bob is connected.
+Run as a background task. Wait for the `Chat as: ` prompt, then send:
+```
+bob
+```
+Wait for output to confirm bob is connected.
 
 ---
 

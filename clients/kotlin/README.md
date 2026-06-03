@@ -20,10 +20,10 @@ gradlew.bat build
 
 ```bash
 # Unix – run the CLI
-./gradlew run --args="alice"
+./gradlew run
 
 # Windows
-gradlew.bat run --args="alice"
+gradlew.bat run
 ```
 
 Once running, type commands at the prompt:
