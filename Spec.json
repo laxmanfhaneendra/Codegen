@@ -1,0 +1,152 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "MinimalMessagingProtocolSpec",
+    "version": "1.0.0",
+    "meta": {
+        "description": "Cross-platform specification for robust offline-first point-to-point messaging.",
+        "transport": "WebSocket",
+        "wire_format": "JSON",
+        "server_reference_note": "The server implementation in Server/server.py is constant. Use and inspect Server/server.py to build the clients efficiently and guarantee complete wire-format compatibility."
+    },
+    "data_models": {
+        "ClientToServer": {
+            "connect": {
+                "description": "Sent by client immediately upon establishing connection to authenticate identity.",
+                "properties": {
+                    "type": { "type": "string", "const": "connect" },
+                    "username": { "type": "string", "pattern": "^[a-zA-Z0-9_-]{1,32}$" }
+                },
+                "required": ["type", "username"]
+            },
+            "send_msg": {
+                "description": "Dispatched by client to transmit a text message to a specific peer.",
+                "properties": {
+                    "type": { "type": "string", "const": "send_msg" },
+                    "msg_id": { "type": "string", "format": "uuid", "description": "Client-generated unique ID for tracking lifecycle and deduplication." },
+                    "to": { "type": "string", "description": "Username of target recipient." },
+                    "body": { "type": "string", "description": "Text payload content." }
+                },
+                "required": ["type", "msg_id", "to", "body"]
+            },
+            "ack": {
+                "description": "Sent by client confirming a message has been received. Authorizes server to purge it from its offline buffer.",
+                "properties": {
+                    "type": { "type": "string", "const": "ack" },
+                    "msg_id": { "type": "string", "format": "uuid" }
+                },
+                "required": ["type", "msg_id"]
+            }
+        },
+        "ServerToClient": {
+            "msg": {
+                "description": "Inbound message pushed by the server, either in real-time or as a flushed buffer entry.",
+                "properties": {
+                    "type": { "type": "string", "const": "msg" },
+                    "msg_id": { "type": "string", "format": "uuid" },
+                    "from": { "type": "string" },
+                    "body": { "type": "string" }
+                },
+                "required": ["type", "msg_id", "from", "body"]
+            },
+            "receipt": {
+                "description": "Server confirmation acknowledging receipt of a sent message. Signals client to remove the entry from its local outbound queue.",
+                "properties": {
+                    "type": { "type": "string", "const": "receipt" },
+                    "msg_id": { "type": "string", "format": "uuid" }
+                },
+                "required": ["type", "msg_id"]
+            }
+        }
+    },
+    "local_storage_schemas": {
+        "outbound_queue": {
+            "description": "Persistent transactional log for queuing messages while offline.",
+            "fields": {
+                "msg_id": { "type": "string", "primary_key": true },
+                "to": { "type": "string", "description": "Recipient username." },
+                "body": { "type": "string" },
+                "status": {
+                    "type": "string",
+                    "enum": ["QUEUED", "PENDING_RECEIPT"],
+                    "description": "Tracks delivery state."
+                },
+                "created_at": {
+                    "type": "string",
+                    "format": "iso8601-utc",
+                    "description": "Insertion timestamp (UTC, ISO-8601). Used for FIFO ordering."
+                }
+            }
+        },
+        "inbound_history": {
+            "description": "Idempotent-safe log to prevent duplicate rendering from network retries.",
+            "fields": {
+                "msg_id": { "type": "string", "primary_key": true },
+                "from": { "type": "string" },
+                "body": { "type": "string" },
+                "timestamp": { "type": "integer" }
+            }
+        }
+    },
+    "state_machine": {
+        "states": ["UNINITIALIZED", "DISCONNECTED", "CONNECTING", "CONNECTED"],
+        "initial_state": "UNINITIALIZED",
+        "transitions": [
+            {
+                "from": "UNINITIALIZED",
+                "event": "INITIALIZE",
+                "action": "Set username, initialize local storage engines",
+                "to": "DISCONNECTED"
+            },
+            {
+                "from": "DISCONNECTED",
+                "event": "NETWORK_AVAILABLE",
+                "action": "Initiate WebSocket connection attempt",
+                "to": "CONNECTING"
+            },
+            {
+                "from": "CONNECTING",
+                "event": "SOCKET_OPEN",
+                "action": "Transmit 'connect' payload immediately. Transition to live system state.",
+                "to": "CONNECTED"
+            },
+            {
+                "from": "CONNECTED",
+                "event": "SOCKET_CLOSE",
+                "action": "Revert all PENDING_RECEIPT outbound messages back to QUEUED.",
+                "to": "DISCONNECTED"
+            }
+        ],
+        "reactive_behaviors": {
+            "ON_CONNECTED": {
+                "description": "Triggered automatically when shifting into CONNECTED state.",
+                "sequence": [
+                    "Scan outbound_queue for all entries.",
+                    "For each item: transmit raw 'send_msg' JSON frame to socket."
+                ]
+            },
+            "ON_USER_ACTION_SEND": {
+                "description": "Triggered when a user hits send in the interface.",
+                "sequence": [
+                    "Generate cryptographically secure v4 UUID as msg_id.",
+                    "Insert into outbound_queue with status = QUEUED.",
+                    "If state == CONNECTED: dispatch 'send_msg' frame immediately. Else: remain in queue."
+                ]
+            },
+            "ON_RECEIVE_RECEIPT": {
+                "description": "Triggered when server responds with type: 'receipt'.",
+                "sequence": [
+                    "Match receipt.msg_id against entries in outbound_queue.",
+                    "Delete the matched record from outbound_queue completely."
+                ]
+            },
+            "ON_RECEIVE_MSG": {
+                "description": "Triggered when server pushes an inbound type: 'msg'.",
+                "sequence": [
+                    "Check inbound_history for pre-existing msg_id.",
+                    "If NOT present: write to inbound_history, dispatch to message handler.",
+                    "Always: send immediate raw 'ack' JSON frame back to server containing msg_id."
+                ]
+            }
+        }
+    }
+}

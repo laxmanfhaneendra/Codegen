@@ -1,0 +1,89 @@
+{
+    "platform_commands": {
+        "python": {
+            "windows": "python",
+            "unix": "python3"
+        },
+        "gradle": {
+            "windows": "gradlew.bat",
+            "unix": "./gradlew"
+        }
+    },
+    "targets": [
+        {
+            "language": "python",
+            "output_dir": "clients/python",
+            "dependencies": [
+                "websockets>=12.0"
+            ],
+            "files": [
+                "client.py",
+                "README.md"
+            ],
+            "build_verification": {
+                "windows": "python -m py_compile client.py",
+                "unix": "python3 -m py_compile client.py"
+            },
+            "build_notes": [
+                "TOOLCHAIN: Python 3.8+.",
+                "LANGUAGE CONCERNS: (1) Use 'asyncio' + 'websockets' for the async model. (2) Use 'uuid.uuid4()' for UUID generation. (3) Use 'enum.Enum' for the state representation. (4) Outbound store should be a 'dict' keyed by 'msg_id'. (5) Inbound store should be a 'set' of 'msg_id' strings for deduplication. (6) Use type hints on all public methods. (7) Use 'json.dumps' and 'json.loads' for JSON wire serialization.",
+                "ENTRY POINT: client.py serves as both the MessagingClient library and the runnable entry point. There is no separate runner file. At the bottom of client.py, add an `if __name__ == '__main__':` block that imports sys, sets up WARNING-level logging, and runs an async `_main()` function via `asyncio.run(_main())`.",
+                "USER INTERFACE LOOP: Inside `_main()`, prompt the user with `input('Chat as: ')` for username. Server URL is fixed to ws://localhost:8765 — do not prompt for it. Define an async `on_message(from_user, body)` callback that prints `<- [from_user] body` and reprints the prompt. Initialize and connect MessagingClient. Then run a readline loop prompting with `<username>> `.",
+                "To prevent blocking the asyncio event loop on Windows, input is read asynchronously using the event loop's executor: `await loop.run_in_executor(None, input, f'{username}> ')`.",
+                "INPUT COMMANDS: The loop parses input: 'exit' or 'quit' terminates the client (calling `await client.disconnect()`); `<recipient> <message>` sends a message using `await client.send_message(recipient, message)`. Any other input displays an error message.",
+                "AUTO-RECONNECT: MessagingClient must include automatic reconnection with exponential backoff. Add fields `_auto_reconnect: bool` (set True in initialize(), False in disconnect()) and `_reconnect_delay: float` (start 1.0, double each attempt, cap at 30.0, reset to 1.0 on success). In the `_recv_loop` finally block, if `_auto_reconnect` is True, schedule `asyncio.ensure_future(self._do_reconnect())`. `_do_reconnect()` loops: log warning, sleep delay, call `connect()`, reset delay on success. On each failed attempt set state back to DISCONNECTED and continue the loop."
+            ]
+        },
+        {
+            "language": "kotlin",
+            "platform": "jvm",
+            "output_dir": "clients/kotlin",
+            "package": "com.minmessage.cli",
+            "dependencies": {
+                "implementation": [
+                    "io.ktor:ktor-client-core:2.3.12",
+                    "io.ktor:ktor-client-okhttp:2.3.12",
+                    "io.ktor:ktor-client-websockets:2.3.12",
+                    "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1",
+                    "org.json:json:20240303",
+                    "org.slf4j:slf4j-nop:2.0.13"
+                ]
+            },
+            "files": [
+                "settings.gradle.kts",
+                "build.gradle.kts",
+                "gradle.properties",
+                "gradle/wrapper/gradle-wrapper.properties",
+                "gradlew",
+                "gradlew.bat",
+                "src/main/kotlin/com/minmessage/cli/Main.kt",
+                "src/main/kotlin/com/minmessage/cli/MessagingClient.kt",
+                "README.md"
+            ],
+            "post_generate": {
+                "windows": "powershell -Command \"New-Item -ItemType Directory -Force -Path gradle/wrapper | Out-Null; Invoke-WebRequest -Uri 'https://github.com/gradle/gradle/raw/v8.7.0/gradle/wrapper/gradle-wrapper.jar' -OutFile 'gradle/wrapper/gradle-wrapper.jar'\"",
+                "unix": "mkdir -p gradle/wrapper && curl -sL -o gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/v8.7.0/gradle/wrapper/gradle-wrapper.jar && chmod +x gradlew",
+                "note": "gradle-wrapper.jar is a binary and cannot be generated as text. This command downloads it from the official Gradle GitHub repo. Run from within output_dir."
+            },
+            "build_verification": {
+                "windows": "gradlew.bat build",
+                "unix": "./gradlew build"
+            },
+            "build_notes": [
+                "TOOLCHAIN: Kotlin 1.9.24, Gradle 8.7 wrapper (distributionUrl=https://services.gradle.org/distributions/gradle-8.7-bin.zip), compileOptions JavaVersion.VERSION_17, kotlinOptions jvmTarget '17'.",
+                "LANGUAGE CONCERNS: (1) Use 'kotlinx.coroutines' + OkHttp/Ktor WebSockets for the async model. (2) Use 'java.util.UUID.randomUUID()' for UUID generation. (3) Use 'enum class' for the state representation. (4) Outbound store should be a 'ConcurrentHashMap' keyed by 'msg_id'. (5) Inbound store should be 'Collections.newSetFromMap(ConcurrentHashMap())' for deduplication. (6) Use data classes for message models. (7) Use 'org.json' for JSON wire serialization.",
+                "IMPORTS: Main.kt must import kotlinx.coroutines.runBlocking. MessagingClient.kt must import kotlinx.coroutines.runBlocking, kotlinx.coroutines.sync.Mutex, kotlinx.coroutines.sync.withLock, and all other used coroutine and Ktor symbols explicitly.",
+                "PLUGINS: kotlin(\"jvm\") version \"1.9.24\"; application.",
+                "settings.gradle.kts: pluginManagement { repositories { mavenCentral(); gradlePluginPortal() } }; dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { mavenCentral() } }; rootProject.name = 'minmessage-cli'.",
+                "gradle.properties: org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8 | kotlin.code.style=official.",
+                "gradle/wrapper/gradle-wrapper.properties: distributionBase=GRADLE_USER_HOME | distributionPath=wrapper/dists | distributionUrl=https\\://services.gradle.org/distributions/gradle-8.7-bin.zip | networkTimeout=10000 | validateDistributionUrl=true | zipStoreBase=GRADLE_USER_HOME | zipStorePath=wrapper/dists.",
+                "gradlew and gradlew.bat: standard Gradle 8.7 wrapper shell scripts. Generate the canonical Gradle wrapper script content for Unix (gradlew) and Windows (gradlew.bat).",
+                "WEBSOCKET: use Ktor client with OkHttp engine: val client = HttpClient(OkHttp) { install(WebSockets) }. Connect with client.webSocket(wsUrl) { ... }. Session type: DefaultClientWebSocketSession. Read frames: for (frame in incoming) { if (frame is Frame.Text) handleFrame(frame.readText()) }. All session.send(...) calls MUST be wrapped inside sendMutex.withLock { ... } to serialize concurrent writes.",
+                "LOCAL STORAGE: In-memory outbound queue using ConcurrentHashMap<String, OutboundEntry>() and inbound history using Collections.newSetFromMap(ConcurrentHashMap()). No database persistence required.",
+                "MAIN CLI LOOP: Main.kt runs a CLI application. It checks CLI arguments: `<username> [ws-url]`. It instantiates and starts MessagingClient. It runs a blocking readline loop on the main thread, supporting commands: `/quit` (break loop), `/status` (print connection status), and `@recipient message text` (send a message via coroutine `runBlocking { client.sendMessage(to, body) }`).",
+                "STDIN FORWARDING: build.gradle.kts MUST include a tasks.named<JavaExec>(\"run\") block that sets standardInput = System.`in`. Without this, Gradle does not forward stdin to the JVM process and the readline loop exits immediately. Place this block before the dependencies block: tasks.named<JavaExec>(\"run\") { standardInput = System.`in` }.",
+                "AUTO-RECONNECT: MessagingClient must include automatic reconnection with exponential backoff. Add fields `autoReconnect: Boolean` (set true in initialize(), false in disconnect()), `reconnectDelayMs: Long` (start 1000, double each attempt, cap at 30000, reset to 1000 on success), and `reconnectJob: Job?`. In the session coroutine's finally block, set state to DISCONNECTED if CONNECTED or CONNECTING, null the session, then if `autoReconnect && reconnectJob?.isActive != true` launch `doReconnect()` in scope. `doReconnect()` loops with delay, calls `connect()`, resets delay on success. In `disconnect()`, set `autoReconnect = false` and cancel `reconnectJob` before closing the session."
+            ]
+        }
+    ]
+}

@@ -1,24 +1,27 @@
 You are a regeneration agent. Your job is to detect missing and incomplete generated files, then regenerate only what is damaged.
 
-## Step 1 — Read the Spec and Detect Platform
+## Step 1 — Read Both Config Files and Detect Platform
 
-Read `Spec.json` from the working directory. Extract:
-- `spec.generate[]` — targets (output_dir, files[], language, build_notes, build_verification, dependencies)
-- `spec.state_machine.states` — expected state names
-- `spec.state_machine.reactive_behaviors` — expected behavior names (keys)
-- `spec.data_models` — all message type names across all groups
-- `spec.local_storage_schemas` — all schema names
-- `spec.meta.server_reference_note` — locate and read the referenced server file as a wire-format compatibility anchor
-- `spec.platform_commands` — resolve `PYTHON` and `GRADLE` for the current OS:
-  - Detect OS (windows or unix)
-  - `PYTHON` = `spec.platform_commands.python[os]`
-  - `GRADLE` = `spec.platform_commands.gradle[os]`
+Detect OS (windows or unix).
+
+Look for the spec file: `Spec.json` or `spec.json` in the working directory. Read it. Extract:
+- `state_machine.states` — expected state names
+- `state_machine.reactive_behaviors` — expected behavior names (keys)
+- `data_models` — all message type names across all groups
+- `local_storage_schemas` — all schema names
+- `meta.server_reference_note` — locate and read the referenced server file as a wire-format compatibility anchor
+
+Look for the generation config: `generate.json` in the same directory. Read it. Extract:
+- `targets[]` — output_dir, files[], language, build_notes, build_verification, dependencies
+- `platform_commands` — resolve for current OS:
+  - `PYTHON` = `platform_commands.python[os]`
+  - `GRADLE` = `platform_commands.gradle[os]`
 
 Use `PYTHON` and `GRADLE` in all commands below. Never hardcode `python`, `python3`, `gradlew`, or `gradlew.bat` directly.
 
 ## Step 2 — Detect Missing Files
 
-For every target in `spec.generate[]`, attempt to read each file in `files[]` from `output_dir`. Mark any unreadable file as **MISSING**.
+For every target in `generate.json`'s `targets[]`, attempt to read each file in `files[]` from `output_dir`. Mark any unreadable file as **MISSING**.
 
 ## Step 3 — Validate Existing Files
 
@@ -73,12 +76,16 @@ Before regenerating an INCOMPLETE file, re-read its current content to stay cons
 7. Storage Schemas — one table per schema (`Field | Type | Primary Key | Notes`)
 8. Reactive Behaviors — one subsection per behavior; description + numbered sequence steps
 
+## Step 5.5 — Post-Generate Steps
+
+After regenerating any files for a target (or if a required binary artifact is absent), check if the target has a `post_generate` key. Detect the current OS and run the platform-appropriate command from within the target's `output_dir`. Report success or failure. For the Kotlin target this installs `gradle/wrapper/gradle-wrapper.jar`, which is a binary that cannot be generated as text and is required for the build to succeed.
+
 ## Step 6 — Verification
 
 Run all three checks for every target, whether or not files were regenerated.
 
 **1. Syntax / compile check — always run, never skip**
-Run `target.build_verification[os]` from the spec unconditionally for every target, even if no files were regenerated. Do not skip because of a cached build — always invoke and capture the exit code.
+Run `target.build_verification[os]` from the generation config unconditionally for every target, even if no files were regenerated. Do not skip because of a cached build — always invoke and capture the exit code.
 
 **2. Import / instantiation smoke test**
 Verify the client class can be loaded and instantiated without errors:
