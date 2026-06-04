@@ -76,9 +76,10 @@ Before regenerating an INCOMPLETE file, re-read its current content to stay cons
 7. Storage Schemas — one table per schema (`Field | Type | Primary Key | Notes`)
 8. Reactive Behaviors — one subsection per behavior; description + numbered sequence steps
 
-## Step 5.5 — Post-Generate Steps
+## Step 5.5 — Pre-Generate Scaffolding & Post-Generate Steps
 
-After regenerating any files for a target (or if a required binary artifact is absent), check if the target has a `post_generate` key. Detect the current OS and run the platform-appropriate command from within the target's `output_dir`. Report success or failure. For the Kotlin target this installs `gradle/wrapper/gradle-wrapper.jar`, which is a binary that cannot be generated as text and is required for the build to succeed.
+- **Pre-Generate**: If any files for a target were marked as **MISSING**, check if the target has a `pre_generate` key. If it does, detect the current OS (windows or unix) and run the platform-appropriate command from within the target's `output_dir` to bootstrap the project scaffolding before writing the regenerated files.
+- **Post-Generate**: After regenerating any files, check if the target has a `post_generate` key. If it does, detect the current OS and run the platform-appropriate command from within the target's `output_dir`. Report success or failure.
 
 ## Step 6 — Verification
 

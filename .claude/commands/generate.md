@@ -18,7 +18,14 @@ Find the `targets[]` array in `generate.json`. Each entry has:
 
 If `targets` is absent, infer targets from `meta.description` of the spec.
 
-## 3. Generate Each File
+## 3. Pre-Generate Steps (Scaffolding)
+
+For every entry in `targets[]` of `generate.json`, check if the target has a `pre_generate` key. If it does:
+- Detect the current OS (windows or unix).
+- Run the platform-appropriate command from within the target's `output_dir` (bootstrap scaffolding).
+- Report success or failure of the scaffolding command. If it fails, report it clearly but continue to the next step.
+
+## 4. Generate Each File
 
 For every entry in `targets[]` of `generate.json`, write every file in its `files` list into its `output_dir`. Apply the rules below.
 
@@ -54,11 +61,11 @@ Every `README.md` is generated entirely from the spec. Use only what is already 
 
 ---
 
-## 4. Post-Generate Steps
+## 5. Post-Generate Steps
 
 After all files for a target have been written, check if the target has a `post_generate` key. If it does, detect the current OS and run the platform-appropriate command from within the target's `output_dir`. Report success or failure for each command. A failed `post_generate` command should be reported clearly but must not prevent processing of remaining targets.
 
-## 5. Report
+## 6. Report
 
 After all files are written, output a summary listing all generated files relative to the workspace root:
 

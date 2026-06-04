@@ -49,22 +49,16 @@
                     "org.slf4j:slf4j-nop:2.0.13"
                 ]
             },
+            "pre_generate": {
+                "windows": "gradle init --type kotlin-application --dsl kotlin --package com.minmessage.cli --project-name minmessage-cli --non-interactive",
+                "unix": "gradle init --type kotlin-application --dsl kotlin --package com.minmessage.cli --project-name minmessage-cli --non-interactive"
+            },
             "files": [
-                "settings.gradle.kts",
                 "build.gradle.kts",
-                "gradle.properties",
-                "gradle/wrapper/gradle-wrapper.properties",
-                "gradlew",
-                "gradlew.bat",
                 "src/main/kotlin/com/minmessage/cli/Main.kt",
                 "src/main/kotlin/com/minmessage/cli/MessagingClient.kt",
                 "README.md"
             ],
-            "post_generate": {
-                "windows": "powershell -Command \"New-Item -ItemType Directory -Force -Path gradle/wrapper | Out-Null; Invoke-WebRequest -Uri 'https://github.com/gradle/gradle/raw/v8.7.0/gradle/wrapper/gradle-wrapper.jar' -OutFile 'gradle/wrapper/gradle-wrapper.jar'\"",
-                "unix": "mkdir -p gradle/wrapper && curl -sL -o gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/v8.7.0/gradle/wrapper/gradle-wrapper.jar && chmod +x gradlew",
-                "note": "gradle-wrapper.jar is a binary and cannot be generated as text. This command downloads it from the official Gradle GitHub repo. Run from within output_dir."
-            },
             "build_verification": {
                 "windows": "gradlew.bat build",
                 "unix": "./gradlew build"
